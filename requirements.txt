@@ -1,0 +1,5 @@
+python-dotenv
+requests==2.31.0
+icalendar==6.1.1
+schedule==1.2.2
+python-telegram-bot==21.10
