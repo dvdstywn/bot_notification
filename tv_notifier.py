@@ -154,18 +154,30 @@ async def send_weekly_schedule(update: Update, context: ContextTypes.DEFAULT_TYP
             logging.info("No events found for this week")
             return
 
-        # Organize events by date
+        # Organize events by date and show title
         weekly_schedule = {}
         for uid, summary, start_date_str in events:
             try:
                 start_date = date.fromisoformat(start_date_str)
                 if start_date < today:
-                    logging.warning(f"Skipping past event: {summary} on {start_date}")
                     continue  # Skip events that have already aired
+
+                # Extract show title and episode info
+                title, episode_info = summary.split(": ")
+                season_episode = episode_info.split("x")
+                if len(season_episode) != 2:
+                    continue  # Skip invalid format
+
+                season = season_episode[0]
+                episode = season_episode[1]
+
+                # Group by date and show title
                 if start_date not in weekly_schedule:
-                    weekly_schedule[start_date] = []
-                weekly_schedule[start_date].append((uid, summary))
-                logging.info(f"Added event: {summary} on {start_date}")
+                    weekly_schedule[start_date] = {}
+                if title not in weekly_schedule[start_date]:
+                    weekly_schedule[start_date][title] = []
+                weekly_schedule[start_date][title].append(episode)
+
             except Exception as e:
                 logging.error(f"Error processing event {uid}: {str(e)}")
                 continue
@@ -179,30 +191,16 @@ async def send_weekly_schedule(update: Update, context: ContextTypes.DEFAULT_TYP
             return
 
         # Create message with formatted schedule
-        message = "📅 This week's TV schedule:\n\n"
+        message = "📅 This week's TV schedule (from today to Sunday):\n\n"
         for day in sorted(weekly_schedule.keys()):
             day_str = day.strftime("%A, %B %d")
             message += f"👉 {day_str}:\n"
-            for uid, summary in weekly_schedule[day]:
-                # Split the summary into title and episode info
-                title, episode_info = summary.split(": ")
-                
-                # Extract season and episode number from episode_info (e.x. "1x03")
-                season_episode = episode_info.split("x")
-                if len(season_episode) != 2:
-                    message += f"- {title}\n"
-                    continue
-                    
-                season = season_episode[0]
-                episode = season_episode[1]
-                
-                # Remove leading zero from episode number
-                episode_number = str(int(episode))
-                
-                message += f"- {title} (Season {season})\n"
-                message += f"  • Episode {episode_number}\n"
-                
+            for show_title, episodes in weekly_schedule[day].items():
+                message += f"- {show_title} (Season {season})\n"
+                for episode in episodes:
+                    message += f"  • Episode {episode.lstrip('0')}\n"
             message += "\n"
+
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=message
@@ -224,6 +222,7 @@ async def send_weekly_schedule(update: Update, context: ContextTypes.DEFAULT_TYP
         )
     finally:
         conn.close()
+
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
