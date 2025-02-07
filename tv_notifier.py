@@ -24,6 +24,7 @@ load_dotenv()
 # Configuration
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ICAL_URL = os.getenv("ICAL_URL")
+CHAT_ID = os.getenv("CHAT_ID")
 ICAL_FILE = "tvmaze_followed.ics"
 DB_FILE = "tv_notifications.db"
 
@@ -107,7 +108,7 @@ def send_notifications():
                 
                 try:
                     bot.send_message(
-                        chat_id="your_chat_id",
+                        chat_id=CHAT_ID,
                         text=message_text
                     )
                     logging.info(f"Notification sent for {uid}")
